@@ -1,0 +1,23 @@
+[package]
+name = "solana-hawk512"
+authors = ["Dean Little <@deanmlittle>"]
+version = "0.1.0"
+edition = "2024"
+description = "Pure-Rust HAWK-512 signature verification, optimised for Solana SBF programs."
+repository = "https://github.com/blueshift-gg/solana-hawk512"
+license = "MIT"
+keywords = ["hawk", "post-quantum", "signature", "solana", "no-std"]
+categories = ["cryptography", "no-std"]
+readme = "README.md"
+
+[lib]
+
+[workspace]
+members = [
+    "host-tests",
+    "program",
+]
+
+[dependencies]
+solana-program-error = "3.0.1"
+solana-shake256 = "0.1.0"

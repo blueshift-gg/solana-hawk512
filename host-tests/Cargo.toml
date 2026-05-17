@@ -1,0 +1,15 @@
+[package]
+name = "host-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Exists only to host integration tests for `solana-hawk512` (KAT / fuzz /
+# soak) without polluting the main crate's dependency surface. Run via
+# `cargo test -p host-tests` (or `cargo test` from the workspace root).
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+solana-hawk512 = { path = ".." }
