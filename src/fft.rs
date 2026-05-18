@@ -547,10 +547,10 @@ mod tests {
     #[test]
     fn lean_fft_constants_drift_check() {
         // ── Fixed-point scaling constants (Lean Defs.lean) ─────────────────
-        assert_eq!(C_W1,  1i64 << 19); //  524_288
+        assert_eq!(C_W1, 1i64 << 19); //  524_288
         assert_eq!(C_Q00, 1i64 << 20); // 1_048_576
         assert_eq!(C_Q01, 1i64 << 17); //   131_072
-        assert_eq!(C_S0,  256);
+        assert_eq!(C_S0, 256);
         assert_eq!(LOG2_TWO_C_S0, 9);
         // 2·C_S0 is exactly 2^LOG2_TWO_C_S0 (Lean: `two_c_s0_is_pow_two`),
         // which is what justifies replacing the floor-division by an

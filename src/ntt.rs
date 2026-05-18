@@ -607,7 +607,12 @@ mod tests {
     /// twiddle tables: each entry is independently recomputed via
     /// `pow(find_root(p), bitrev(i, LOGN), p)` and compared element-by-element.
     /// Drift in `find_root`, `calc_w`, or the constants surfaces here.
+    //
+    // The whole point of a drift test is to pin constants; clippy's
+    // "this assertion is on a constant value / always true" lints are
+    // exactly the property we want to assert, so they're allowed here.
     #[test]
+    #[allow(clippy::assertions_on_constants, clippy::identity_op)]
     fn lean_ntt_constants_drift_check() {
         // ── Prime values ───────────────────────────────────────────────────
         // Lean: Hawk512.Spec.{P1, P2}.
@@ -633,9 +638,9 @@ mod tests {
         // W via the same bitrev would also be wrong, so a few hardcoded pairs
         // pin the function itself.
         assert_eq!(bitrev(0, LOGN), 0);
-        assert_eq!(bitrev(1, LOGN), 256);   // 000000001 → 100000000
-        assert_eq!(bitrev(2, LOGN), 128);   // 000000010 → 010000000
-        assert_eq!(bitrev(3, LOGN), 384);   // 000000011 → 110000000
+        assert_eq!(bitrev(1, LOGN), 256); // 000000001 → 100000000
+        assert_eq!(bitrev(2, LOGN), 128); // 000000010 → 010000000
+        assert_eq!(bitrev(3, LOGN), 384); // 000000011 → 110000000
         assert_eq!(bitrev(255, LOGN), 510); // 011111111 → 111111110
         assert_eq!(bitrev(511, LOGN), 511); // 111111111 → 111111111
 
@@ -662,6 +667,6 @@ mod tests {
         assert_eq!(4096u128 * 3249, 13_307_904);
         // Sanity: r = 8317 passes, r = 8318 fails (bound is a strict ⌊x⌋).
         assert!(1600u128 * 8317 <= 13_307_904);
-        assert!(1600u128 * 8318  > 13_307_904);
+        assert!(1600u128 * 8318 > 13_307_904);
     }
 }

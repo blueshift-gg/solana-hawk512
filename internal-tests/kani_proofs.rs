@@ -100,8 +100,8 @@ fn ntt_lazy_butterfly_bounds() {
 #[kani::proof]
 #[kani::solver(z3)]
 fn ntt_full_after_lazy_no_overflow() {
-    let x: u64 = kani::any();   // < 2p (lazy output)
-    let b: u64 = kani::any();   // < 2p (lazy output)
+    let x: u64 = kani::any(); // < 2p (lazy output)
+    let b: u64 = kani::any(); // < 2p (lazy output)
     let zeta: u64 = kani::any();
     let p: u64 = kani::any();
 
@@ -116,7 +116,7 @@ fn ntt_full_after_lazy_no_overflow() {
     // Sum and diff: `x + y < 2p + p = 3p < 2³² + 2³¹ < 2³³` — still fits u64,
     // and after `% p` becomes `< p` ⇒ fits u32.
     let lo = (x + y) % p;
-    let hi = (x + p - y) % p;  // `x + p ≥ y` since y < p ≤ x + p.
+    let hi = (x + p - y) % p; // `x + p ≥ y` since y < p ≤ x + p.
     assert!(lo < p);
     assert!(hi < p);
 }
@@ -164,7 +164,7 @@ fn bit_unsafe_precondition_holds() {
     let idx: usize = kani::any();
 
     // Constrain to reasonable HAWK buffer sizes to keep the model small.
-    kani::assume(len <= HAWK_512_PUBKEY_LEN);  // 1024
+    kani::assume(len <= HAWK_512_PUBKEY_LEN); // 1024
     kani::assume(idx < len * 8);
 
     assert!(idx >> 3 < len);
@@ -186,9 +186,11 @@ fn bit_unsafe_precondition_holds() {
 #[kani::unwind(40)]
 fn padding_all_zero_4byte_no_panic() {
     let mut buf = [0u8; 4];
-    for b in buf.iter_mut() { *b = kani::any(); }
+    for b in buf.iter_mut() {
+        *b = kani::any();
+    }
     let start_bit: usize = kani::any();
-    kani::assume(start_bit <= 32);  // start_bit ∈ [0, len * 8].
+    kani::assume(start_bit <= 32); // start_bit ∈ [0, len * 8].
 
     let actual = padding_all_zero(&buf, start_bit);
 
@@ -196,7 +198,10 @@ fn padding_all_zero_4byte_no_panic() {
     let mut spec = true;
     let mut j = start_bit;
     while j < 32 {
-        if (buf[j >> 3] >> (j & 7)) & 1 != 0 { spec = false; break; }
+        if (buf[j >> 3] >> (j & 7)) & 1 != 0 {
+            spec = false;
+            break;
+        }
         j += 1;
     }
     assert_eq!(actual, spec);
@@ -215,22 +220,34 @@ fn sym_break_small_no_panic() {
     // N = 512; this small instance still exercises every branch of the
     // loop body. (For full N=512, see the proptest.)
     let mut w: [i32; 4] = [0; 4];
-    for x in w.iter_mut() { *x = kani::any(); }
+    for x in w.iter_mut() {
+        *x = kani::any();
+    }
 
     // Wrap in a length-4 slice; sym_break takes &[i32; N], so we mirror
     // its body inline (it's a 3-line loop). This is the spec form.
     let mut spec = false;
     for &x in w.iter() {
-        if x > 0 { spec = true; break; }
-        if x < 0 { break; }
+        if x > 0 {
+            spec = true;
+            break;
+        }
+        if x < 0 {
+            break;
+        }
     }
 
     // Inline sym_break body (identical to the production code, just
     // with N = 4):
     let mut actual = false;
     for &x in w.iter() {
-        if x > 0 { actual = true; break; }
-        if x < 0 { break; }
+        if x > 0 {
+            actual = true;
+            break;
+        }
+        if x < 0 {
+            break;
+        }
     }
 
     assert_eq!(actual, spec);
@@ -307,7 +324,7 @@ fn decompress_gr_low5_one_coeff_round_trip() {
 fn decompress_gr_low9_one_coeff_round_trip() {
     let sign: bool = kani::any();
     let mag: u16 = kani::any();
-    kani::assume((mag as usize) < 1usize << HIGH_01);  // < 4096
+    kani::assume((mag as usize) < 1usize << HIGH_01); // < 4096
 
     // Total bits: 1 (sign) + 9 (low) + (z + 1), z ≤ ⌊4095 / 512⌋ = 7,
     // ⇒ ≤ 18 bits ⇒ 3 bytes (24 bits) suffice.
