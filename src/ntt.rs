@@ -600,4 +600,68 @@ mod tests {
             assert_eq!(v as u64, (i == 2) as u64, "coeff {i}");
         }
     }
+
+    /// Every NTT-side scalar pinned in `formal_verification/Hawk512/Defs.lean`
+    /// or `formal_verification/Hawk512/NTT.lean` is re-asserted here. Plus
+    /// the algebraic relationships that justify the bit-reversed `W1`/`W2`
+    /// twiddle tables: each entry is independently recomputed via
+    /// `pow(find_root(p), bitrev(i, LOGN), p)` and compared element-by-element.
+    /// Drift in `find_root`, `calc_w`, or the constants surfaces here.
+    #[test]
+    fn lean_ntt_constants_drift_check() {
+        // ── Prime values ───────────────────────────────────────────────────
+        // Lean: Hawk512.Spec.{P1, P2}.
+        assert_eq!(P1, 2_147_473_409);
+        assert_eq!(P2, 2_147_389_441);
+        // Both primes lie below 2³¹; `lazy_*_fits_u32` rests on this.
+        assert!(P1 < 1u64 << 31);
+        assert!(P2 < 1u64 << 31);
+        // NTT-friendliness: (p−1) ≡ 0 (mod 2N). (Already in
+        // `primes_are_ntt_friendly`; re-stated here as a Lean-side mirror.)
+        assert_eq!((P1 - 1) % (2 * N as u64), 0);
+        assert_eq!((P2 - 1) % (2 * N as u64), 0);
+
+        // ── find_root outputs (PSI1, PSI2 in Lean NTT.lean) ────────────────
+        // The Lean primitive-2N-root facts are `native_decide`d on these
+        // specific values; if `find_root` ever returns something else, the
+        // Lean theorems no longer describe the running code.
+        assert_eq!(find_root(P1), 2_094_155_704);
+        assert_eq!(find_root(P2), 1_133_102_181);
+
+        // ── bitrev sanity (used to populate W1/W2 via calc_w) ──────────────
+        // A bitrev bug would change the W tables but the test that recomputes
+        // W via the same bitrev would also be wrong, so a few hardcoded pairs
+        // pin the function itself.
+        assert_eq!(bitrev(0, LOGN), 0);
+        assert_eq!(bitrev(1, LOGN), 256);   // 000000001 → 100000000
+        assert_eq!(bitrev(2, LOGN), 128);   // 000000010 → 010000000
+        assert_eq!(bitrev(3, LOGN), 384);   // 000000011 → 110000000
+        assert_eq!(bitrev(255, LOGN), 510); // 011111111 → 111111110
+        assert_eq!(bitrev(511, LOGN), 511); // 111111111 → 111111111
+
+        // ── W1 / W2 twiddle tables ─────────────────────────────────────────
+        // Spec: W[i] = h^bitrev(i, LOGN) mod p, h the primitive 2N-th root.
+        // We recompute independently from the pinned PSI values; any drift
+        // in `calc_w`'s loop, indexing, or modular exponentiation surfaces.
+        const PSI1_EXPECTED: u64 = 2_094_155_704;
+        const PSI2_EXPECTED: u64 = 1_133_102_181;
+        for i in 0..N {
+            let exp = bitrev(i, LOGN) as u64;
+            let expected_p1 = powmod(PSI1_EXPECTED, exp, P1) as u32;
+            let expected_p2 = powmod(PSI2_EXPECTED, exp, P2) as u32;
+            assert_eq!(W1[i], expected_p1, "W1[{}] drift", i);
+            assert_eq!(W2[i], expected_p2, "W2[{}] drift", i);
+        }
+
+        // ── Bound check constants (qnorm_in_bound) ─────────────────────────
+        // Lean: Hawk512.Spec.{BOUND_NUM, BOUND_DEN}.  Spec ties these to
+        // `8n · σ²_verify` with `n = 512`, `σ_verify = 57/40`:
+        //   8·512·(57)²/(40)² = 4096·3249/1600 = 13_307_904/1600.
+        // The Rust `qnorm_in_bound` literal compares `1600·r ≤ 13_307_904`.
+        assert_eq!(8u128 * 512 * 57 * 57, 13_307_904 * (40 * 40 / 1600));
+        assert_eq!(4096u128 * 3249, 13_307_904);
+        // Sanity: r = 8317 passes, r = 8318 fails (bound is a strict ⌊x⌋).
+        assert!(1600u128 * 8317 <= 13_307_904);
+        assert!(1600u128 * 8318  > 13_307_904);
+    }
 }

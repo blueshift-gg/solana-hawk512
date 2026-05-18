@@ -23,7 +23,7 @@ use solana_shake256::Shake256;
 /// that lets the SBF codegen drop the per-bit bounds check — `bit()` is
 /// called ~15k times decoding one HAWK-512 (pubkey + signature).
 #[inline(always)]
-fn bit(buf: &[u8], idx: usize) -> u32 {
+pub(crate) fn bit(buf: &[u8], idx: usize) -> u32 {
     // SAFETY: callers guarantee `idx >> 3 < buf.len()` (see above).
     unsafe { core::hint::assert_unchecked((idx >> 3) < buf.len()) };
     ((buf[idx >> 3] >> (idx & 7)) & 1) as u32
@@ -35,7 +35,7 @@ fn bit(buf: &[u8], idx: usize) -> u32 {
 /// returns `Some(j)` where `j` is the number of bits consumed, or `None`
 /// (⊥) on any malformed input. In all HAWK uses `high ≤ low + 4`, so the
 /// variable (unary) part of any coefficient is at most 16 bits.
-fn decompress_gr<const K: usize, const LOW: usize, const HIGH: usize>(
+pub(crate) fn decompress_gr<const K: usize, const LOW: usize, const HIGH: usize>(
     y: &[u8],
     out: &mut [i32; N],
 ) -> Option<usize> {
@@ -137,7 +137,7 @@ fn decompress_gr<const K: usize, const LOW: usize, const HIGH: usize>(
 /// hundreds–thousands of bits; do the byte-aligned tail 8 bytes at a time
 /// (one unaligned u64 load + compare) instead of bit-by-bit.
 #[inline]
-fn padding_all_zero(buf: &[u8], start_bit: usize) -> bool {
+pub(crate) fn padding_all_zero(buf: &[u8], start_bit: usize) -> bool {
     let len_bits = buf.len() * 8;
     let mut j = start_bit;
     // Finish the partial leading byte bit-by-bit.
