@@ -49,6 +49,10 @@ mod delta_table;
 mod fft;
 mod ntt;
 
+#[cfg(kani)]
+#[path = "../internal-tests/kani_proofs.rs"]
+mod kani_proofs;
+
 // ---- HAWK-512 parameters (spec Table 4) ----------------------------------
 
 pub(crate) const LOGN: usize = 9;
@@ -750,5 +754,46 @@ mod tests {
         let pk = Hawk512Pubkey::from_bytes([0u8; HAWK_512_PUBKEY_LEN]);
         let sig = Hawk512Signature::from_bytes([0u8; HAWK_512_SIGNATURE_LEN]);
         assert!(!sig.verify(b"msg", &pk));
+    }
+
+    /// Every scalar pinned in `formal_verification/Hawk512/Defs.lean` is
+    /// re-asserted here. If you change a Rust constant without updating the
+    /// Lean side, the per-element refinement proofs are talking about a
+    /// different setting than the running code — this test breaks loudly to
+    /// flag that.
+    #[test]
+    fn lean_scalar_constants_drift_check() {
+        // ── Polynomial / log degree ────────────────────────────────────────
+        // Lean: Hawk512.Spec.N, Hawk512.Spec.LOGN.
+        assert_eq!(LOGN, 9);
+        assert_eq!(N, 512);
+
+        // ── Wire-format byte lengths ───────────────────────────────────────
+        // Lean: Hawk512.Spec.{PUBKEY_LEN, SIGNATURE_LEN, SALT_LEN, HPUB_LEN}.
+        assert_eq!(HAWK_512_PUBKEY_LEN, 1024);
+        assert_eq!(HAWK_512_SIGNATURE_LEN, 555);
+        assert_eq!(PUBKEY_LEN, 1024);
+        assert_eq!(SIGNATURE_LEN, 555);
+        assert_eq!(SALT_LEN, 24);
+        assert_eq!(HPUB_LEN, 32);
+        // Prepared-pubkey size formula must match the field layout.
+        assert_eq!(
+            HAWK_512_PREPARED_PUBKEY_LEN,
+            (N / 2) * 8 + N * 8 + 6 * (N * 4) + HPUB_LEN
+        );
+        assert_eq!(HAWK_512_PREPARED_PUBKEY_LEN, 18_464);
+
+        // ── Golomb–Rice parameters (per Lean Defs.lean) ────────────────────
+        // Lean: LOW_00, HIGH_00, LOW_01, HIGH_01, LOW_S1, HIGH_S1, HIGH_S0.
+        assert_eq!(LOW_00, 5);
+        assert_eq!(HIGH_00, 9);
+        assert_eq!(LOW_01, 9);
+        assert_eq!(HIGH_01, 12);
+        assert_eq!(LOW_S1, 5);
+        assert_eq!(HIGH_S1, 9);
+        assert_eq!(HIGH_S0, 13);
+        // The "extra precision bits on q00[0]" count derived in `decode_public`
+        // is 16 − HIGH_00 = 7.
+        assert_eq!(16 - HIGH_00, 7);
     }
 }

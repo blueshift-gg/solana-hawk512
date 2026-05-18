@@ -10,6 +10,19 @@ keywords = ["hawk", "post-quantum", "signature", "solana", "no-std"]
 categories = ["cryptography", "no-std"]
 readme = "README.md"
 
+# Keep the published tarball lean. Maintainer-only sources — Kani
+# harnesses and the Lean formal-verification proofs — live under
+# `internal-tests/` and `formal_verification/`, pulled in via
+# `#[cfg(kani)] #[path = "../internal-tests/..."]` declarations in
+# `src/lib.rs`. `cargo kani` on the published tarball won't run (test
+# files absent by design); Kani is intended to run from the git
+# checkout.
+exclude = [
+    "internal-tests",
+    "formal_verification",
+    ".github",
+]
+
 [lib]
 
 [workspace]
@@ -17,6 +30,9 @@ members = [
     "host-tests",
     "program",
 ]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
 
 [dependencies]
 solana-program-error = "3.0.1"

@@ -533,3 +533,63 @@ fn rp_d(
     }
     inv_fft_to_w0(qh01_re, &mut qh01_im, h0, w0)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every FFT-side scalar pinned in `formal_verification/Hawk512/Defs.lean`
+    /// or `formal_verification/Hawk512/FFT.lean` is re-asserted here, plus
+    /// the spec relationship `2·C_W1·C_Q01 = n·C_Q00·C_S0` and the
+    /// dead-slot zero-out of `DELTA[0]`/`DELTA[1]`. The full DELTA table
+    /// is checked against a stable polynomial-hash checksum so any drift
+    /// in the auto-generated values is caught.
+    #[test]
+    fn lean_fft_constants_drift_check() {
+        // ── Fixed-point scaling constants (Lean Defs.lean) ─────────────────
+        assert_eq!(C_W1, 1i64 << 19); //  524_288
+        assert_eq!(C_Q00, 1i64 << 20); // 1_048_576
+        assert_eq!(C_Q01, 1i64 << 17); //   131_072
+        assert_eq!(C_S0, 256);
+        assert_eq!(LOG2_TWO_C_S0, 9);
+        // 2·C_S0 is exactly 2^LOG2_TWO_C_S0 (Lean: `two_c_s0_is_pow_two`),
+        // which is what justifies replacing the floor-division by an
+        // arithmetic shift in the `s0` rounding.
+        assert_eq!(2 * C_S0, 1i64 << LOG2_TWO_C_S0);
+        // Spec relationship (Lean: `c_s0_spec`):
+        //   2·C_W1·C_Q01 = n·C_Q00·C_S0.
+        assert_eq!(2 * C_W1 * C_Q01, (N as i64) * C_Q00 * C_S0);
+
+        // ── DELTA dead slots (Lean: `fft_index_at_least_2`) ────────────────
+        // The FFT only ever indexes DELTA[u+m] with m ≥ 2, so DELTA[0] and
+        // DELTA[1] are never read and are zeroed (their true value 2³¹
+        // doesn't fit `i32`).
+        assert_eq!(DELTA[0], (0, 0));
+        assert_eq!(DELTA[1], (0, 0));
+
+        // ── First-read DELTA entry ─────────────────────────────────────────
+        // DELTA[2] = round(2³¹·delta^rev9(2)) with delta = e^{iπ/N} and
+        // rev9(2) = 128, so DELTA[2] = round(2³¹·e^{iπ/4}) =
+        // round(2³¹·(√2/2, √2/2)) = (1_518_500_250, 1_518_500_250).
+        assert_eq!(DELTA[2], (1_518_500_250, 1_518_500_250));
+
+        // ── Full-table stable checksum ────────────────────────────────────
+        // Polynomial hash; any drift in the auto-generated table changes
+        // this value. The hash itself is computed via the same formula in
+        // Python over the source-of-truth `delta_table.rs`.
+        let mut h: u64 = 0;
+        for &(re, im) in DELTA.iter() {
+            h = h.wrapping_mul(1_000_003).wrapping_add(re as i64 as u64);
+            h = h.wrapping_mul(1_000_003).wrapping_add(im as i64 as u64);
+        }
+        // Hardcoded once from a successful run; re-pinning this number
+        // requires a separate Lean / spec review.
+        assert_eq!(h, DELTA_POLYHASH_EXPECTED);
+    }
+
+    /// Expected polynomial-hash of the full DELTA table. Computed once
+    /// from the canonical auto-generated table; subsequent runs check
+    /// stability — any drift (regenerated table, edited entry) changes
+    /// this number.
+    const DELTA_POLYHASH_EXPECTED: u64 = 0x35b0_5991_cdb8_d12f;
+}
