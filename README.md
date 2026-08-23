@@ -1,5 +1,15 @@
 # Solana HAWK-512
 
+> **DEPRECATED - do not use for anything that needs security.**
+> HAWK was [withdrawn](https://hawk-sign.info/#withdrawal) from NIST's additional
+> signatures standardisation process on 29 July 2026 after a key-recovery attack:
+> [*HAWK-n Key Recovery Reduces to SVP in Dimension n/2 + 1*](https://eprint.iacr.org/2026/1593)
+> (Straznickas & Weis, discovered with Claude 
+> [write-up](https://www.anthropic.com/research/discovering-cryptographic-weaknesses))
+> cuts HAWK-512 from 2^150 to 2^108 gates and HAWK-1024 from 2^288 to 2^182;
+> HAWK-256 keys are recovered in hours on a single server. No parameter tweak
+> saves the scheme. This repo is kept for reference only.
+
 [![CI](https://github.com/blueshift-gg/solana-hawk512/actions/workflows/ci.yml/badge.svg)](https://github.com/blueshift-gg/solana-hawk512/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/solana-hawk512.svg)](https://crates.io/crates/solana-hawk512)
 [![docs.rs](https://docs.rs/solana-hawk512/badge.svg)](https://docs.rs/solana-hawk512)
